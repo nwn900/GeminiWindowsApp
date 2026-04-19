@@ -30,11 +30,6 @@ fn is_allowed_host(hostname: &str) -> bool {
 }
 
 fn main() {
-    // Force the underlying WebView2 engine and all unmanaged native popups to identify as Chrome
-    std::env::set_var(
-        "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
-        "--user-agent=\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36\""
-    );
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
@@ -52,12 +47,29 @@ fn main() {
                 WebviewUrl::External(gemini_url),
             )
             .title("Gemini")
-            .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+            .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0")
             .initialization_script(r#"
                 Object.defineProperty(navigator, 'webdriver', { get: () => false });
                 if (window.chrome && window.chrome.webview) {
                     delete window.chrome.webview;
                 }
+                window.open = function(url, name, features) {
+                    if (url) { window.location.assign(url); }
+                    return { close: function(){}, focus: function(){} };
+                };
+                document.addEventListener('click', function(e) {
+                    let target = e.target.closest('a');
+                    if (target && target.getAttribute('target') === '_blank') {
+                        target.setAttribute('target', '_self');
+                    }
+                }, true);
+                window.addEventListener('load', function() {
+                    if (window.location.href.includes('callback') || window.location.href.includes('/auth/')) {
+                        setTimeout(function() {
+                            window.location.assign('/');
+                        }, 1500);
+                    }
+                });
             "#)
             .inner_size(1200.0, 900.0)
             .auto_resize()
