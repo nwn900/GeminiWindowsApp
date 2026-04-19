@@ -46,7 +46,13 @@ fn main() {
                 WebviewUrl::External(gemini_url),
             )
             .title("Gemini")
-            .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0")
+            .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+            .initialization_script(r#"
+                Object.defineProperty(navigator, 'webdriver', { get: () => false });
+                if (window.chrome && window.chrome.webview) {
+                    delete window.chrome.webview;
+                }
+            "#)
             .inner_size(1200.0, 900.0)
             .auto_resize()
             .on_navigation(|url| {
