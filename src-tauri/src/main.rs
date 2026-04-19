@@ -52,6 +52,16 @@ fn main() {
                 if (window.chrome && window.chrome.webview) {
                     delete window.chrome.webview;
                 }
+                window.open = function(url, name, features) {
+                    if (url) { window.location.assign(url); }
+                    return { close: function(){}, focus: function(){} };
+                };
+                document.addEventListener('click', function(e) {
+                    let target = e.target.closest('a');
+                    if (target && target.getAttribute('target') === '_blank') {
+                        target.setAttribute('target', '_self');
+                    }
+                }, true);
             "#)
             .inner_size(1200.0, 900.0)
             .auto_resize()

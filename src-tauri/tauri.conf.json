@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/nicegui-org/nicegui/refs/heads/main/nicegui/static/tauri.schema.json",
   "productName": "Gemini",
   "version": "1.1.0",
-  "identifier": "com.gemini.app.v2",
+  "identifier": "com.gemini.app.v3",
   "build": {
     "frontendDist": "../frontend",
     "devUrl": "https://gemini.google.com/app"
