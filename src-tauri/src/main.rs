@@ -119,7 +119,11 @@ fn main() {
                 })
                 .on_tray_icon_event(|tray, event| {
                     match event {
-                        tauri::tray::TrayIconEvent::Click { .. } => {
+                        tauri::tray::TrayIconEvent::Click {
+                            button: tauri::tray::MouseButton::Left,
+                            button_state: tauri::tray::MouseButtonState::Up,
+                            ..
+                        } => {
                             let app = tray.app_handle();
                             if let Some(window) = app.get_webview_window("main") {
                                 let _ = window.show();
@@ -129,6 +133,7 @@ fn main() {
                         _ => {}
                     }
                 })
+                .show_menu_on_left_click(false)
                 .build(app)?;
 
             Ok(())
