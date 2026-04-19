@@ -12,11 +12,6 @@
     "security": {
       "dangerousDisableAssetCspModification": true,
       "csp": null
-    },
-    "trayIcon": {
-      "iconPath": "icons/icon.png",
-      "iconAsTemplate": false,
-      "tooltip": "Gemini"
     }
   },
   "bundle": {
