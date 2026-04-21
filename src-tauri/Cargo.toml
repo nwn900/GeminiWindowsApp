@@ -1,6 +1,6 @@
 [package]
 name = "gemini-windows-app"
-version = "1.1.0"
+version = "1.1.6"
 description = "A simple Windows desktop application for Google Gemini"
 authors = ["nwn900"]
 license = "ISC"

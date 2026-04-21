@@ -1,6 +1,7 @@
 // Prevents an extra console window on Windows in release builds.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{
     menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem},
     tray::TrayIconBuilder,
@@ -8,7 +9,6 @@ use tauri::{
 };
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_autostart::ManagerExt;
-use std::sync::atomic::{AtomicBool, Ordering};
 
 static IS_QUITTING: AtomicBool = AtomicBool::new(false);
 
@@ -21,16 +21,32 @@ const ALLOWED_HOSTS: &[&str] = &[
     "googleusercontent.com",
     "gstatic.com",
     "googleapis.com",
+    "recaptcha.net",
 ];
 
 fn is_allowed_host(hostname: &str) -> bool {
-    ALLOWED_HOSTS.iter().any(|suffix| {
-        hostname == *suffix || hostname.ends_with(&format!(".{}", suffix))
-    })
+    ALLOWED_HOSTS
+        .iter()
+        .any(|suffix| hostname == *suffix || hostname.ends_with(&format!(".{}", suffix)))
+}
+
+fn is_allowed_url(url: &url::Url) -> bool {
+    match url.scheme() {
+        "http" | "https" => url.host_str().is_some_and(is_allowed_host),
+        "about" => url.path() == "blank",
+        "blob" => url
+            .path()
+            .split_once(':')
+            .and_then(|(scheme, rest)| match scheme {
+                "http" | "https" => url::Url::parse(&format!("{scheme}:{rest}")).ok(),
+                _ => None,
+            })
+            .is_some_and(|inner_url| inner_url.host_str().is_some_and(is_allowed_host)),
+        _ => false,
+    }
 }
 
 fn main() {
-
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_autostart::init(
@@ -74,12 +90,8 @@ fn main() {
             .inner_size(1200.0, 900.0)
             .auto_resize()
             .on_navigation(|url| {
-                // Allow navigation to Gemini and Google auth domains
-                if let Some(host) = url.host_str() {
-                    is_allowed_host(host)
-                } else {
-                    false
-                }
+                // Allow Gemini/Google auth hosts plus popup-safe auth URLs.
+                is_allowed_url(url)
             })
             .build()?;
 
@@ -170,4 +182,39 @@ fn main() {
         })
         .run(tauri::generate_context!())
         .expect("error while running Gemini");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{is_allowed_host, is_allowed_url};
+
+    #[test]
+    fn allows_google_auth_hosts() {
+        assert!(is_allowed_host("gemini.google.com"));
+        assert!(is_allowed_host("accounts.google.com"));
+        assert!(is_allowed_host("www.gstatic.com"));
+        assert!(is_allowed_host("www.recaptcha.net"));
+    }
+
+    #[test]
+    fn rejects_unknown_hosts() {
+        assert!(!is_allowed_host("example.com"));
+        assert!(!is_allowed_host("google.com.example.com"));
+    }
+
+    #[test]
+    fn allows_auth_safe_urls() {
+        let blank: url::Url = "about:blank".parse().unwrap();
+        let blob: url::Url =
+            "blob:https://accounts.google.com/12345678-1234-1234-1234-123456789012"
+                .parse()
+                .unwrap();
+        let app: url::Url = "https://gemini.google.com/app".parse().unwrap();
+        let blocked: url::Url = "https://example.com/login".parse().unwrap();
+
+        assert!(is_allowed_url(&blank));
+        assert!(is_allowed_url(&blob));
+        assert!(is_allowed_url(&app));
+        assert!(!is_allowed_url(&blocked));
+    }
 }
