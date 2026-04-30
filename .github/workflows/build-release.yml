@@ -33,13 +33,6 @@ jobs:
       - name: Install Tauri CLI
         run: cargo install tauri-cli --version "^2"
 
-      - name: Build frontend
-        working-directory: frontend
-        run: |
-          npm install
-          npm run build
-        continue-on-error: true
-
       - name: Build Tauri app
         working-directory: src-tauri
         run: cargo tauri build
